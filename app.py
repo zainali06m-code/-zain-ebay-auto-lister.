@@ -1,33 +1,29 @@
 import os
 import requests
 
-EBAY_ACCESS_TOKEN = os.environ.get("EBAY_ACCESS_TOKEN")
+EBAY_TOKEN = os.environ.get("EBAY_AUTH_TOKEN")
 
-BASE_URL = "https://api.ebay.com"
+if not EBAY_TOKEN:
+    raise RuntimeError("EBAY_AUTH_TOKEN is not configured")
 
-def ebay_headers():
-    if not EBAY_ACCESS_TOKEN:
-        raise RuntimeError("EBAY_ACCESS_TOKEN is not configured.")
+url = "https://api.ebay.com/ws/api.dll"
 
-    return {
-        "Authorization": f"Bearer {EBAY_ACCESS_TOKEN}",
-        "Content-Type": "application/json",
-        "Content-Language": "en-GB",
-    }
+headers = {
+    "X-EBAY-API-COMPATIBILITY-LEVEL": "1455",
+    "X-EBAY-API-CALL-NAME": "GeteBayOfficialTime",
+    "X-EBAY-API-SITEID": "3",
+    "Content-Type": "text/xml",
+}
 
+xml = f"""<?xml version="1.0" encoding="utf-8"?>
+<GeteBayOfficialTimeRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+    <RequesterCredentials>
+        <eBayAuthToken>{EBAY_TOKEN}</eBayAuthToken>
+    </RequesterCredentials>
+</GeteBayOfficialTimeRequest>
+"""
 
-def get_selling_policies():
-    url = f"{BASE_URL}/sell/account/v1/fulfillment_policy"
-    response = requests.get(
-        url,
-        headers=ebay_headers(),
-        params={"marketplace_id": "EBAY_GB"},
-        timeout=30,
-    )
+response = requests.post(url, headers=headers, data=xml, timeout=30)
 
-    response.raise_for_status()
-    return response.json()
-
-
-if __name__ == "__main__":
-    print(get_selling_policies())
+print("HTTP:", response.status_code)
+print(response.text)
